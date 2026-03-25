@@ -1,10 +1,4 @@
-﻿#!/usr/bin/env python3
-"""
-ULTIMATE SPACE INVADERS - Complete Edition
-A fully-featured arcade game with boss battles, power-ups, saves, and more!
-"""
-
-import pygame
+﻿import pygame
 import random
 import math
 import sys
@@ -13,11 +7,11 @@ import json
 from enum import Enum
 from datetime import datetime
 
-# ==================== INITIALIZATION ====================
+# Initialize Pygame
 pygame.init()
 pygame.mixer.init(frequency=22050, size=-16, channels=2)
 
-# ==================== CONSTANTS ====================
+# Game constants
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 FPS = 60
@@ -32,11 +26,9 @@ YELLOW = (255, 255, 0)
 PURPLE = (255, 0, 255)
 CYAN = (0, 255, 255)
 ORANGE = (255, 165, 0)
-PINK = (255, 192, 203)
 GOLD = (255, 215, 0)
 SILVER = (192, 192, 192)
 
-# ==================== ENUMS ====================
 class GameState(Enum):
     MENU = 1
     PLAYING = 2
@@ -57,12 +49,6 @@ class PowerUpType(Enum):
 # ==================== BACKGROUND ====================
 class Background:
     def __init__(self):
-        self.type = 0
-        self.scroll_y = 0
-        self.stars = []
-        self.create_stars()
-    
-    def create_stars(self):
         self.stars = []
         for _ in range(150):
             self.stars.append({
@@ -74,10 +60,6 @@ class Background:
             })
     
     def update(self):
-        self.scroll_y += 1
-        if self.scroll_y >= SCREEN_HEIGHT:
-            self.scroll_y = 0
-        
         for star in self.stars:
             star['y'] += star['speed']
             if star['y'] > SCREEN_HEIGHT:
@@ -86,24 +68,11 @@ class Background:
             star['twinkle'] += 0.05
     
     def draw(self, screen):
-        if self.type == 0:
-            screen.fill(BLACK)
-            for star in self.stars:
-                brightness = int(100 + 155 * (math.sin(star['twinkle']) + 1) / 2)
-                color = (brightness, brightness, brightness)
-                pygame.draw.circle(screen, color, (int(star['x']), int(star['y'])), star['size'])
-        elif self.type == 1:
-            for i in range(SCREEN_HEIGHT):
-                color_value = int(50 + 100 * (i / SCREEN_HEIGHT))
-                pygame.draw.line(screen, (color_value, 0, color_value), (0, i), (SCREEN_WIDTH, i))
-            for star in self.stars[:100]:
-                pygame.draw.circle(screen, WHITE, (int(star['x']), int(star['y'])), star['size']//2)
-        else:
-            for i in range(SCREEN_HEIGHT):
-                color_value = int(100 * math.sin(i * 0.05 + self.scroll_y * 0.05))
-                pygame.draw.line(screen, (color_value, 0, color_value * 2), (0, i), (SCREEN_WIDTH, i))
-            for star in self.stars:
-                pygame.draw.circle(screen, CYAN, (int(star['x']), int(star['y'])), star['size'])
+        screen.fill(BLACK)
+        for star in self.stars:
+            brightness = int(100 + 155 * (math.sin(star['twinkle']) + 1) / 2)
+            color = (brightness, brightness, brightness)
+            pygame.draw.circle(screen, color, (int(star['x']), int(star['y'])), star['size'])
 
 # ==================== BOSS ====================
 class Boss:
@@ -113,15 +82,16 @@ class Boss:
         self.height = 100
         self.x = SCREEN_WIDTH // 2 - self.width // 2
         self.y = 50
-        self.health = 50 + level * 20
+        boss_number = level // 5
+        self.health = 50 + (boss_number - 1) * 30
         self.max_health = self.health
         self.speed_x = 2
         self.direction = 1
         self.shoot_cooldown = 0
         self.attack_pattern = 0
         self.pattern_timer = 0
-        self.colors = [RED, PURPLE, ORANGE, YELLOW, CYAN]
-        self.color = self.colors[min(level - 1, len(self.colors) - 1)]
+        self.colors = [RED, ORANGE, PURPLE, YELLOW, CYAN]
+        self.color = self.colors[min(boss_number - 1, len(self.colors) - 1)]
         self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
     
     def update(self):
@@ -138,7 +108,7 @@ class Boss:
         self.rect.y = self.y
         
         if self.shoot_cooldown <= 0:
-            self.shoot_cooldown = 20
+            self.shoot_cooldown = 25
             return self.shoot_pattern()
         else:
             self.shoot_cooldown -= 1
@@ -165,6 +135,7 @@ class Boss:
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, self.rect)
         pygame.draw.rect(screen, WHITE, self.rect, 3)
+        
         eye_size = 15
         pygame.draw.circle(screen, WHITE, (int(self.x + self.width * 0.3), int(self.y + self.height * 0.3)), eye_size)
         pygame.draw.circle(screen, WHITE, (int(self.x + self.width * 0.7), int(self.y + self.height * 0.3)), eye_size)
@@ -181,6 +152,9 @@ class Boss:
         pattern_names = ["Straight", "Triple", "Spread", "Circular"]
         text = font.render(f"Pattern: {pattern_names[self.attack_pattern]}", True, WHITE)
         screen.blit(text, (self.x, self.y - 35))
+        
+        health_text = font.render(f"HP: {self.health}/{self.max_health}", True, WHITE)
+        screen.blit(health_text, (self.x, self.y - 55))
     
     def hit(self, damage):
         self.health -= damage
@@ -687,7 +661,7 @@ class HighScoreManager:
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("ULTIMATE SPACE INVADERS - Complete Edition")
+        pygame.display.set_caption("ULTIMATE SPACE INVADERS")
         self.clock = pygame.time.Clock()
         self.font_large = pygame.font.Font(None, 72)
         self.font_medium = pygame.font.Font(None, 48)
@@ -700,30 +674,9 @@ class Game:
         self.background = Background()
         
         self.reset_game()
-        self.show_startup_message()
-    
-    def show_startup_message(self):
-        print("=" * 50)
-        print("ULTIMATE SPACE INVADERS - Complete Edition")
-        print("=" * 50)
-        print("Controls:")
-        print("  ← → or A/D    - Move ship")
-        print("  SPACE         - Shoot")
-        print("  S             - Toggle sound")
-        print("  ↑/↓           - Adjust volume")
-        print("  H             - High scores")
-        print("  L             - Load saved game")
-        print("  Ctrl+S        - Save game")
-        print("  ESC           - Menu/Exit")
-        print("=" * 50)
-        print("Power-ups:")
-        print("  ⚡ Rapid Fire  | 🛡️ Shield  | 💥 Multi-Shot")
-        print("  2x Points     | ❤️ Heal     | 💣 Nuke")
-        print("=" * 50)
-        print("Every 5th level: EPIC BOSS BATTLE!")
-        print("=" * 50)
     
     def reset_game(self):
+        # Start in MENU state
         self.state = GameState.MENU
         self.score = 0
         self.level = 1
@@ -743,15 +696,29 @@ class Game:
         self.player_name = ""
         self.name_input_active = False
         
+        # Don't create enemies yet - wait for SPACE in menu
+        # self.create_enemies()  # REMOVED - we'll create when game starts
+    
+    def start_game(self):
+        """Start the game from menu"""
+        self.state = GameState.PLAYING
+        self.level = 1
+        self.score = 0
+        self.player = Player(SCREEN_WIDTH // 2 - 20, SCREEN_HEIGHT - 60)
         self.create_enemies()
     
     def create_enemies(self):
-        if self.level % 5 == 0 and self.level > 0:
+        # Check if this level is a boss level (every 5th level)
+        if self.level % 5 == 0:
+            print(f"=== BOSS BATTLE! Level {self.level} ===")
             self.state = GameState.BOSS_BATTLE
             self.boss = Boss(self.level)
+            self.enemies.clear()
             self.sound_manager.play('boss')
             return
         
+        # Normal level - create regular enemies
+        self.state = GameState.PLAYING
         self.enemies.clear()
         rows = min(3 + self.level // 2, 5)
         cols = min(8 + self.level // 2, 11)
@@ -765,7 +732,7 @@ class Game:
                 y = start_y + row * 45
                 self.enemies.append(Enemy(x, y, enemy_type))
         
-        self.background.type = (self.level - 1) % 3
+        print(f"Level {self.level} - {len(self.enemies)} enemies spawned")
     
     def handle_events(self):
         for event in pygame.event.get():
@@ -775,7 +742,7 @@ class Game:
             if event.type == pygame.KEYDOWN:
                 if self.state == GameState.MENU:
                     if event.key == pygame.K_SPACE:
-                        self.state = GameState.PLAYING
+                        self.start_game()
                     elif event.key == pygame.K_h:
                         self.state = GameState.HIGH_SCORES
                     elif event.key == pygame.K_s:
@@ -787,8 +754,7 @@ class Game:
                             self.level = loaded['level']
                             self.player.lives = loaded['lives']
                             self.create_enemies()
-                            self.state = GameState.PLAYING
-                            print("Game loaded successfully!")
+                            print("Game loaded!")
                     elif event.key == pygame.K_UP:
                         self.sound_manager.set_volume(min(1.0, self.sound_manager.volume + 0.1))
                     elif event.key == pygame.K_DOWN:
@@ -801,30 +767,17 @@ class Game:
                             self.bullets.append(bullet)
                             self.sound_manager.play('laser')
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = GameState.MENU
                         self.reset_game()
                     elif event.key == pygame.K_s:
                         self.sound_manager.toggle_sound()
-                    elif event.key == pygame.K_l:
-                        loaded = self.save_manager.load_game()
-                        if loaded:
-                            self.score = loaded['score']
-                            self.level = loaded['level']
-                            self.player.lives = loaded['lives']
-                            self.create_enemies()
-                            print("Game loaded successfully!")
                     elif event.key == pygame.K_UP:
                         self.sound_manager.set_volume(min(1.0, self.sound_manager.volume + 0.1))
                     elif event.key == pygame.K_DOWN:
                         self.sound_manager.set_volume(max(0.0, self.sound_manager.volume - 0.1))
                     elif event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_CTRL:
-                        save_data = {
-                            'score': self.score,
-                            'level': self.level,
-                            'lives': self.player.lives
-                        }
+                        save_data = {'score': self.score, 'level': self.level, 'lives': self.player.lives}
                         if self.save_manager.save_game(save_data):
-                            print("Game saved successfully!")
+                            print("Game saved!")
                 
                 elif self.state == GameState.BOSS_BATTLE:
                     if event.key == pygame.K_SPACE:
@@ -833,15 +786,12 @@ class Game:
                             self.bullets.append(bullet)
                             self.sound_manager.play('laser')
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = GameState.MENU
                         self.reset_game()
                 
                 elif self.state == GameState.GAME_OVER:
                     if event.key == pygame.K_SPACE:
                         self.reset_game()
-                        self.state = GameState.PLAYING
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = GameState.MENU
                         self.reset_game()
                     elif event.key == pygame.K_RETURN:
                         self.name_input_active = True
@@ -849,9 +799,10 @@ class Game:
                 elif self.state == GameState.LEVEL_COMPLETE:
                     if event.key == pygame.K_SPACE:
                         self.level += 1
+                        self.boss = None
                         self.create_enemies()
-                        self.state = GameState.PLAYING
                         self.sound_manager.play('level_up')
+                        print(f"Moving to Level {self.level}")
                 
                 elif self.state == GameState.HIGH_SCORES:
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_SPACE:
@@ -871,8 +822,6 @@ class Game:
         return True
     
     def update_normal(self):
-        time_multiplier = 0.5 if self.player.slow_time_active else 1
-        
         self.player.update()
         self.background.update()
         
@@ -984,17 +933,19 @@ class Game:
                     if self.boss.hit(10):
                         self.explosions.append(Explosion(self.boss.x + self.boss.width//2, self.boss.y + self.boss.height//2, 'boss'))
                         self.sound_manager.play('explosion')
-                        self.score += 500 * self.level
-                        self.state = GameState.LEVEL_COMPLETE
-                        self.boss = None
+                        self.score += 500 * (self.level // 5)
+                        print(f"BOSS DEFEATED! +{500 * (self.level // 5)} points!")
                         for _ in range(50):
                             angle = random.uniform(0, 2 * math.pi)
                             speed = random.uniform(1, 10)
                             vx = math.cos(angle) * speed
                             vy = math.sin(angle) * speed
                             self.particles.append(Particle(self.boss.x + self.boss.width//2, self.boss.y + self.boss.height//2, self.boss.color, (vx, vy), 30))
+                        self.boss = None
+                        self.state = GameState.LEVEL_COMPLETE
                     else:
                         self.particles.append(Particle(bullet.x, bullet.y, YELLOW, (random.uniform(-2, 2), random.uniform(-2, 2)), 5))
+                    break
             
             for bullet in self.bullets[:]:
                 if not bullet.is_player and bullet.rect.colliderect(self.player.rect):
@@ -1051,31 +1002,22 @@ class Game:
         level_text = self.font_small.render(f"Level: {self.level}", True, WHITE)
         self.screen.blit(level_text, (SCREEN_WIDTH - 120, 10))
         
-        controls = self.font_tiny.render("S: Sound | ↑/↓: Volume | L: Load | Ctrl+S: Save | ESC: Menu", True, (100, 100, 100))
-        self.screen.blit(controls, (SCREEN_WIDTH - 450, SCREEN_HEIGHT - 20))
-        
         if self.player.score_multiplier > 1:
             mult_text = self.font_medium.render(f"{self.player.score_multiplier}x SCORE!", True, GOLD)
             mult_rect = mult_text.get_rect(center=(SCREEN_WIDTH // 2, 80))
             self.screen.blit(mult_text, mult_rect)
         
         if self.state == GameState.MENU:
-            title_y = SCREEN_HEIGHT // 2 - 150 + math.sin(pygame.time.get_ticks() * 0.003) * 5
             title = self.font_large.render("ULTIMATE SPACE INVADERS", True, CYAN)
-            title_rect = title.get_rect(center=(SCREEN_WIDTH//2, title_y))
+            title_rect = title.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 - 100))
             self.screen.blit(title, title_rect)
-            
-            subtitle = self.font_small.render("COMPLETE EDITION", True, GOLD)
-            subtitle_rect = subtitle.get_rect(center=(SCREEN_WIDTH//2, title_y + 60))
-            self.screen.blit(subtitle, subtitle_rect)
             
             y_start = SCREEN_HEIGHT // 2
             options = [
                 ("Press SPACE to Start", WHITE),
                 ("Press H for High Scores", WHITE),
-                ("Press L to Load Saved Game", GREEN),
-                (f"S - Sound: {'ON' if self.sound_manager.sound_enabled else 'OFF'}", CYAN),
-                (f"Volume: {int(self.sound_manager.volume * 100)}%", WHITE)
+                ("Press L to Load Game", GREEN),
+                (f"Sound: {'ON' if self.sound_manager.sound_enabled else 'OFF'}", CYAN)
             ]
             
             for i, (text, color) in enumerate(options):
@@ -1083,15 +1025,9 @@ class Game:
                 option_rect = option.get_rect(center=(SCREEN_WIDTH//2, y_start + i * 50))
                 self.screen.blit(option, option_rect)
             
-            info_lines = [
-                "7 POWER-UPS | BOSS BATTLES | SAVE SYSTEM | 3 BACKGROUNDS",
-                "Every 5th Level: EPIC BOSS BATTLE!"
-            ]
-            y_pos = SCREEN_HEIGHT - 80
-            for line in info_lines:
-                text = self.font_tiny.render(line, True, (150, 150, 150))
-                self.screen.blit(text, (SCREEN_WIDTH//2 - text.get_width()//2, y_pos))
-                y_pos += 25
+            info = self.font_tiny.render("Every 5th Level: BOSS BATTLE!", True, GOLD)
+            info_rect = info.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT - 50))
+            self.screen.blit(info, info_rect)
         
         elif self.state == GameState.BOSS_BATTLE:
             boss_text = self.font_large.render("BOSS BATTLE!", True, RED)
@@ -1108,27 +1044,21 @@ class Game:
             game_over_rect = game_over.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 - 80))
             self.screen.blit(game_over, game_over_rect)
             
-            final_score = self.font_medium.render(f"Final Score: {self.score}", True, WHITE)
+            final_score = self.font_medium.render(f"Score: {self.score}", True, WHITE)
             final_score_rect = final_score.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 - 20))
             self.screen.blit(final_score, final_score_rect)
             
-            rank = self.high_score_manager.get_rank(self.score)
-            if rank <= 10:
-                rank_text = self.font_small.render(f"Rank: #{rank}", True, GOLD)
-                rank_rect = rank_text.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 20))
-                self.screen.blit(rank_text, rank_rect)
-            
             if not self.name_input_active and (len(self.high_score_manager.scores) < 10 or self.score > self.high_score_manager.scores[-1]["score"]):
                 enter_name = self.font_small.render("Press ENTER to save your score!", True, GREEN)
-                enter_rect = enter_name.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 70))
+                enter_rect = enter_name.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 50))
                 self.screen.blit(enter_name, enter_rect)
             elif self.name_input_active:
                 name_prompt = self.font_small.render("Enter your name: " + self.player_name + "_", True, WHITE)
-                name_rect = name_prompt.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 70))
+                name_rect = name_prompt.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 50))
                 self.screen.blit(name_prompt, name_rect)
             
-            restart = self.font_small.render("Press SPACE to play again", True, GREEN)
-            restart_rect = restart.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 130))
+            restart = self.font_small.render("Press SPACE to play again", True, WHITE)
+            restart_rect = restart.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 100))
             self.screen.blit(restart, restart_rect)
         
         elif self.state == GameState.LEVEL_COMPLETE:
@@ -1196,7 +1126,6 @@ class Game:
         pygame.quit()
         sys.exit()
 
-# ==================== MAIN ====================
 if __name__ == "__main__":
     game = Game()
     game.run()
