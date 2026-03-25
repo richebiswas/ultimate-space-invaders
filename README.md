@@ -4,6 +4,12 @@ A feature-packed Space Invaders clone with boss battles, power-ups, save system,
 
 ![Game Screenshot](screenshot.png)
 
+
+## 🎥 Demo
+
+Check out the gameplay of the project in action:
+
+🔗 https://youtu.be/_DeU6M7n_oI?si=ATeOL8tJHPO8iSr2
 ## ✨ Features
 
 ### 🎮 Core Gameplay
