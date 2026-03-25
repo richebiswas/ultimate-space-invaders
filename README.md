@@ -2,7 +2,7 @@
 
 A feature-packed Space Invaders clone with boss battles, power-ups, save system, and stunning visual effects! Built with Python and Pygame.
 
-![Game Screenshot](screenshot.png)
+![Game Screenshot](game loading.png)
 
 ## ✨ Features
 
